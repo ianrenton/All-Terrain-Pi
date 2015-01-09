@@ -1,0 +1,185 @@
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=windows-1250">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>All-Terrain Pi</title>
+    <script src="gyro.js"></script><style type="text/css"></style>
+    <script type="text/javascript">
+    // All-Terrain Pi control code
+    // By Ian Renton
+    // http://robots.ianrenton.com/atp
+
+    // This is the web page that allows control of the vehicle. It uses touch and tilt
+    // controls (mobile devices only!) and sends the data over a websocket connection to
+    // the Python control code running in the background. It also pulls in mjpeg video
+    // from the vehicle's camera.
+    
+    // Vars
+    var speed = 0;
+    var turn = 0;
+    var timer;
+
+    // Request fullscreen and scroll to top just after loading - forces mobile
+    // browsers to hide the address bar.
+    setTimeout( function() {
+      var doc = window.document;
+      var docEl = doc.documentElement;
+
+      var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+      requestFullScreen.call(docEl);
+      window.scrollTo(0, 1);
+    }, 100 );
+    
+    // Set up websocket client
+    var ws = new WebSocket("ws://" + location.hostname + ":9000/ws");
+    ws.onopen = function() {};
+    ws.onmessage = function (e) { 
+      document.getElementById('comms').innerHTML = "Comms OK";
+    };
+    ws.onclose = function() { 
+      document.getElementById('comms').innerHTML = "No comms with vehicle";
+    };
+
+    // Start monitoring device orientation
+    gyro.frequency = 250
+    gyro.startTracking(function(o) {
+      var message;
+      if (o.z > 8.5)
+      {
+        message = "Pick up device!";
+      }
+      else if (o.x < -2)
+      {
+        message = "Turn device around!";
+      }
+      else if (o.y > 7)
+      {
+        message = "Rotate device left!";
+      }
+      else if (o.y < -7)
+      {
+        message = "Rotate device right!";
+      }
+      else
+      {
+        // Orientation is pretty much OK, look at variation in the y axis to
+        // monitor the user's "steering"
+        message = "Left thumb: Reverse &nbsp;&nbsp;&nbsp; Right thumb: Forward<br/>Tilt device to steer";
+        turn = Math.round(o.y * 25);
+
+        // Cap to -100 - +100
+        if (turn > 100)
+        {
+          turn = 100;
+        }
+        if (turn < -100)
+        {
+          turn = -100;
+        }
+        ws.send('t'+turn);
+  			document.getElementById('turn').innerHTML = turn;
+      }
+      document.getElementById('message').innerHTML = message;
+		});
+
+    // Start increasing forward speed
+    function fwd() {
+      clearInterval(timer);
+      timer = setInterval(increment, 50);
+    }
+
+    // Start increasing reverse speed
+    function back() {
+      clearInterval(timer);
+      timer = setInterval(decrement, 50);
+    }
+
+    // Stop the vehicle
+    function stop() {
+      clearInterval(timer);
+      speed = 0;
+      ws.send('s0');
+      document.getElementById('speed').innerHTML = speed;
+    }
+
+    // Called repeatedly by fwd() to ramp up the forward speed smoothly.
+    function increment() {
+      speed = speed + 5;
+      if (speed > 100) {
+        speed = 100;
+      }
+      ws.send('s'+speed);
+      document.getElementById('speed').innerHTML = speed;
+    }
+
+    // Called repeatedly by back() to ramp up the backward speed smoothly.
+    function decrement() {
+      speed = speed - 5;
+      if (speed-- < -100) {
+        speed = -100;
+      }
+      ws.send('s'+speed);
+      document.getElementById('speed').innerHTML = speed;
+    }
+    
+    // Send a default "stop" message to make sure we start up
+    // in a zeroed state.
+    stop();
+    </script>
+
+    <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+    div#video {
+      background: gray url("http://mjpeg.sanford.io/count.mjpeg");
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: 50% 50%;
+      height: 100%;
+      width: 100%;
+    }
+    div#data
+    {
+      z-index: 100;
+      position: absolute;
+      width: 100%;
+      top: 1em;
+      font-size: 1.2em;
+      text-align: center;
+      font-family: sans-serif;
+      color: white;
+      text-shadow:
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000;
+    }
+    div.fwdbackarea {
+      z-index: 200;
+      height: 100%;
+      width: 50%;
+    }
+    div#fwdarea {
+      float: right;
+      position: relative;
+    }
+    div#backarea {
+      float: left;
+      position: relative;
+    }
+    </style>
+  </head>
+  <body>
+    <div id="video">
+      <div id="data">
+        Speed: <span id="speed">0</span> &nbsp;&nbsp;&nbsp; Turn: <span id="turn">0</span>&nbsp;&nbsp;&nbsp;&nbsp;<br/>
+        <span id="message">Left thumb: Reverse &nbsp;&nbsp;&nbsp; Right thumb: Forward<br>Tilt device to steer</span><br/>
+        <span id="comms">No comms with vehicle</span>
+      </div>
+      <div class="fwdbackarea" id="backarea" ontouchstart="back();" ontouchend="stop();" oncontextmenu="return false;"> </div>
+      <div class="fwdbackarea" id="fwdarea" ontouchstart="fwd();" ontouchend="stop();" oncontextmenu="return false;"></div>
+    </div>
+  </body>
+</html>
