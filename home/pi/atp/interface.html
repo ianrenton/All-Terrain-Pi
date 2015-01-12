@@ -13,7 +13,7 @@
     // controls (mobile devices only!) and sends the data over a websocket connection to
     // the Python control code running in the background. It also pulls in mjpeg video
     // from the vehicle's camera.
-    
+
     // Vars
     var speed = 0;
     var turn = 0;
@@ -133,7 +133,7 @@
       padding: 0;
     }
     div#video {
-      background: gray url("http://mjpeg.sanford.io/count.mjpeg");
+      background: gray url("http://192.168.0.1:8080/?action=stream");
       background-size: contain;
       background-repeat: no-repeat;
       background-position: 50% 50%;
