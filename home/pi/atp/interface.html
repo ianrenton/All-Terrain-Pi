@@ -17,7 +17,9 @@
     // Vars
     var speed = 0;
     var turn = 0;
+    var ws;
     var timer;
+    var lastResponseRx = 0;
 
     // Request fullscreen and scroll to top just after loading - forces mobile
     // browsers to hide the address bar.
@@ -31,20 +33,36 @@
     }, 100 );
     
     // Set up websocket client
-    var ws = new WebSocket("ws://" + location.hostname + ":9000/ws");
-    ws.onopen = function() {};
-    ws.onmessage = function (e) { 
-      document.getElementById('comms').innerHTML = "Comms OK";
-    };
-    ws.onclose = function() { 
-      document.getElementById('comms').innerHTML = "No comms with vehicle";
-    };
+    function connect() {
+      ws = new WebSocket("ws://" + location.hostname + "/ws");
+      ws.onopen = function() {};
+      ws.onmessage = function (e) {
+        var d = new Date();
+        lastResponseRx = d.getTime();
+        document.getElementById('comms').innerHTML = "Comms OK";
+      };
+      ws.onclose = function() { 
+        document.getElementById('comms').innerHTML = "No comms with vehicle";
+      };
+    }
+    connect();
+
+    // Set up monitoring for comms timeout
+    setInterval(function(){
+      var d = new Date();
+      if (d.getTime() > lastResponseRx + 1000)
+      {
+        document.getElementById('comms').innerHTML = "No comms with vehicle";
+        // Try to restart websocket
+        connect();
+      }
+    }, 1000);
 
     // Start monitoring device orientation
-    gyro.frequency = 250
+    gyro.frequency = 100
     gyro.startTracking(function(o) {
       var message;
-      if (o.z > 8.5)
+      if (o.z > 9)
       {
         message = "Pick up device!";
       }
@@ -52,11 +70,11 @@
       {
         message = "Turn device around!";
       }
-      else if (o.y > 7)
+      else if (o.y > 8)
       {
         message = "Rotate device left!";
       }
-      else if (o.y < -7)
+      else if (o.y < -8)
       {
         message = "Rotate device right!";
       }
