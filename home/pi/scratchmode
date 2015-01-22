@@ -1,0 +1,4 @@
+#!/bin/bash
+sudo killall python
+scratch ./Documents/Scratch\ Projects/ATPdemo.sb &
+python atp/scratchrx.py
