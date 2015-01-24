@@ -37,10 +37,10 @@ while True:
   allCommands = regex.findall(data)
   for command in allCommands:
     if command[0] == 'speed':
-      print 'speed ' + command[1]
-      PBR.SetMotor1(int(command[1]))
+      print 'speed ' + str(float(command[1])/100.0)
+      PBR.SetMotor1(float(command[1])/100.0)
     elif command[0] == 'turn':
-      print 'turn ' + str(int(command[1])*100)
-      PBR.SetMotor2(int(command[1])*100)
+      print 'turn ' + str(float(command[1])/100.0)
+      PBR.SetMotor2(float(command[1])/100.0)
 
 s.close()
